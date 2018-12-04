@@ -1,0 +1,67 @@
+<!doctype html>
+<html>
+
+	<head>
+		<meta charset="UTF-8">
+		<title></title>
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<link href="css/mui.min.css" rel="stylesheet" />
+		<script src="js/mui.min.js"></script>
+	</head>
+	<style>
+		.header {
+			background: #282828;
+		    width: auto;
+		    height: 50px;
+		    line-height: 50px;
+		    overflow: hidden;
+		}
+		.header .left {
+			float: left;
+		}
+		.header .left .nav-icon {
+			float: left;
+		    width: 48px;
+		    text-align: center;
+		    border-right: 1px solid #222;
+		    box-shadow: 1px 0 1px #363636;
+		    color: #999;
+		}
+		.left .title {
+			padding: 0 10px;
+		    float: left;
+		    font-size: 14px;
+		    color: #efefef;
+		    text-overflow: ellipsis;
+		    white-space: nowrap;
+		    overflow: hidden;
+		}
+	</style>
+
+	<body>
+		
+		<header class="header">
+			<div class="left">
+				<div class="nav-icon">
+					<i class="mui-icon mui-icon-bars"></i>
+				</div>
+				<div class="title">卖座电影</div>
+			</div>
+		</header>
+		
+		<script type="text/javascript">
+			mui.init()
+			
+			//当点击菜单展示按钮的时候
+			//类似于jq，mui框架绑定事件，该绑定事件相当于事件委托，tap事件是mui封装的在移动端没有延迟的click事件
+			mui('.header').on('tap', '.nav-icon', (e) => {
+				//在这里去触发index.html窗口的menu:toggle事件（切换）
+				//获取应用首页WebviewObject窗口对象
+				let index_webview = plus.webview.getLaunchWebview()   
+				//利用mui封装好的mui.fire方法来触发调用index窗口的事件(目标窗口的自定义事件),目标webview必须触发loaded事件后才能使用自定义事件
+				mui.fire(index_webview, 'menu: toggle')
+			})
+		</script>
+	</body>
+
+</html>

@@ -1,0 +1,234 @@
+<!doctype html>
+<html>
+
+	<head>
+		<meta charset="UTF-8">
+		<title></title>
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<link href="../css/mui.min.css" rel="stylesheet" />
+		<link rel="stylesheet" href="../css/swiper-4.3.5.min.css" />
+		<script src="../js/mui.min.js"></script>
+		<script src="../js/vue.min.js"></script>
+		<script src="../js/axios.min.js"></script>
+		<script src="../js/swiper-4.3.5.min.js" type="text/javascript" charset="utf-8"></script>
+		
+	</head>
+	<style>
+		.home-banner .swiper-pagination-bullet-active { background: #282828; }
+		.home-banner .swiper-wrapper, .home-banner .swiper-slide { height: 2.1094rem; }
+		.home-movie-box { padding-top: 18px; margin-bottom: 10px; }
+		.home-movie-item {
+			    margin: 0 17px 17px 17px;
+			    background-color: #f9f9f9;
+			    -webkit-box-shadow: 0.5px 0.5px 1px #a8a8a8;
+			    -moz-box-shadow: 0.5px 0.5px 1px #a8a8a8;
+			    box-shadow: 0.5px 0.5px 1px #a8a8a8;
+			    cursor: pointer;
+		}
+		.home-movie-item .img-box {
+			height: 1.9182rem;
+		}
+		.home-movie-item .info {
+			padding: 10px 12px;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+		}
+		.home-movie-item .info .title {
+			font-size: 12px;
+		    -webkit-user-select: text;
+		    user-select: text;
+		}
+		.home-movie-item .info .desc {
+			font-size: 12px;
+		    color: #9a9a9a;
+		}
+		.home-movie-item .info .rage {
+			color: #f78360;
+		    display: inline-block;
+		    margin-right: 15px;
+		    font-size: 18px;
+		}
+		.home-movie-item .info .time {
+		    font-size: 10px;
+		    color: RGB(245, 162, 125);
+		}
+		.more-button {
+			width: 1.6rem;
+		    height: .3rem;
+		    border: 1px solid #aaa;
+		    border-radius: 15px;
+		    margin: 10px auto .3rem;
+		    text-align: center;
+		    line-height: .3rem;
+		    font-size: 12px;
+		    color: #616161;
+		    cursor: pointer;
+		}
+	</style>
+
+	<body>
+		<div id="app">
+			<home-banner></home-banner>
+			<!--根事例把data传给第一层的子组件-->
+			<home-movie-box v-for="type in types" :key="type.id" :data="type"></home-movie-box>
+		</div>
+		
+		<!--轮播图组件-->
+		<template id="home-banner">
+			<div class="swiper-container home-banner" ref="el">
+				<div class="swiper-wrapper">
+					<div class="swiper-slide img-bg" v-for="item in billboards" :key="item.id">
+						<img width="100%" :src="item.imageUrl" alt="" />
+					</div>
+				</div>
+				<div class="swiper-pagination"></div>
+			</div>
+		</template>
+		
+		<!--一堆movie的框组件-->
+		<template id="home-movie-box">
+			<div class="home-movie-box">
+				<!--父组件传参子组件-->
+				<home-movie-item :type="data.type" v-for = "film in films" :key = "film.id" :data = "film"></home-movie-item>
+				<div class="more-button" @tap="tofilms(data.type)">更多{{data.title}}电影</div>
+			</div>
+		</template>
+		
+		<!--单部电影组件-->
+		<template id="home-movie-item">
+			<div class="home-movie-item" @tap="toDetail(data.id)">
+				<div class="img-box img-bg">
+					<img width="100%" :src="data.cover.origin" alt="" />
+				</div>
+				<div class="info">
+					<div class="left">
+						<div class="title">{{data.name}}</div>
+						<div class="desc" v-if="type === 'now-playing'">{{data.cinemaCount}}家影院上映  {{data.watchCount}}人购票</div>
+					</div>
+					<div class="right">
+						<div class="rage" v-if="type === 'now-playing'">{{data.grade}}</div>
+						<div class="time" v-else>{{data.premiereAt | time}}</div>
+					</div>
+				</div>
+			</div>
+		</template>
+		
+		
+		<script type="text/javascript">
+			//定义一个全局过滤器,过滤器不会改变数据，只会把数据过滤成想要的样子return出去,然后在输出数据的位置加上 |和过滤器的名字
+			Vue.filter('time', value => {
+				//传入时间戳
+				let date = new Date(value)
+				let month = date.getMonth() + 1
+				let day = date.getDate()
+				return month + '月' + day + '日上映'
+			})
+			
+			Vue.component('home-banner', {
+				template: '#home-banner',
+				data () {
+					return {
+						billboards: []
+					}
+				},
+				methods:{
+					getbillboards () {
+						axios.get("https://m.maizuo.com/v4/api/billboard/home", {
+							params: {__t: Date.now()}
+						}).then(res => {
+							this.billboards = res.data.data.billboards
+							Vue.nextTick(() => {
+								new Swiper(this.$refs.el, {
+									pagination: {el: ".swiper-pagination"},
+									autoplay: {duration: 3000} //自动播放
+								})
+							})
+						})
+					}
+				},
+				created () {
+					this.getbillboards()
+				}
+			})
+			
+			Vue.component('home-movie-box', {
+				template: '#home-movie-box',
+				props: ['data'], //子组件接收父组件传过来的参数
+				data () {
+					return {
+						films: []
+					}	
+				},
+				methods: {
+					getfilms () {
+						//this.data.type是为了动态控制两个接口
+						axios.get('https://m.maizuo.com/v4/api/film/'+this.data.type+'?page=1&count=5', {
+							params: {__t: Date.now()}
+						}).then(res => {
+							this.films = res.data.data.films
+						})
+					},
+					tofilms (type) {
+						//获取到main窗口，触发它的webview: switch事件
+						let main_webview = plus.webview.getWebviewById('main.html')
+						mui.fire(main_webview, 'webview: switch', {page_id: 'films.html', type: type})
+					}
+				},
+				created () {
+					this.getfilms()
+				}
+			})
+			
+			Vue.component('home-movie-item', {
+				template: '#home-movie-item',
+				props: ['data', 'type'], //子组件接收父组件传过来的参数
+//				mixins: [global_mixin]
+//				methods: {
+//					todetail (id) {
+//						//这里不能再plus.webview.create()生成新窗口了
+//						mui.openWindow({
+//						    url:'detail.html',
+//						    id:'detail.html',
+//						    styles:{
+//						      top:'0px',//新页面顶部位置
+//						      bottom:'0px/',//新页面底部位置
+//						    },
+//						    extras:{
+//						      .....//自定义扩展参数，可以用来处理页面间传值
+//						    },
+//						    createNew:false,//是否重复创建同样id的webview，默认为false:不重复创建，直接显示
+//						    show:{
+//						      autoShow:true,//页面loaded事件发生后自动显示，默认为true
+//						      aniShow:animationType,//页面显示动画，默认为”slide-in-right“；
+//						      duration:animationTime//页面动画持续时间，Android平台默认100毫秒，iOS平台默认200毫秒；
+//						    },
+//						    waiting:{
+//						      autoShow:true,//自动显示等待框，默认为true
+//						      title:'正在加载...',//等待对话框上显示的提示内容
+//						      options:{
+//						        width:waiting-dialog-widht,//等待框背景区域宽度，默认根据内容自动计算合适宽度
+//						        height:waiting-dialog-height,//等待框背景区域高度，默认根据内容自动计算合适高度
+//						        ......
+//						      }
+//						    }
+//						})
+//					}
+//				}
+			})
+			
+			new Vue({
+				el: '#app',
+				//有两类的电影，有正在热映和正在上映，两类数据和接口都不同，所以数据绑定在根事例上面,可使一个盒子同时做两种数据的展示
+				data: {
+					types: [
+						{id: 1, title: '正在热映', type: 'now-playing'},
+						{id: 2, title: '即将上映', type: 'coming-soon'}
+					]
+				}
+			})
+			
+		</script>
+	</body>
+
+</html>

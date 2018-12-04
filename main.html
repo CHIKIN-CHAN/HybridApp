@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+
+	<head>
+		<meta charset="UTF-8">
+		<title></title>
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<link href="css/mui.min.css" rel="stylesheet" />
+		<script src="js/mui.min.js"></script>
+	</head>
+
+	<body>
+		<script type="text/javascript">
+			
+			(function($, doc){
+				$.init()
+				
+				$.plusReady(function(){
+					//获取当前窗口的WebviewObject对象
+					let self = plus.webview.currentWebview();
+					
+					//存放要创建的页面(窗口)名字的数组
+					let contents = ["home.html", "films.html", "detail.html"]
+					//返回的是一个存储了所有的内容窗口的对象,执行创建内容窗口
+					let webview_obj = createContentWebview()
+					//当前所处窗口的id
+					let active_webview_id = contents[0]
+					
+					//为窗口切换绑定监听事件
+					window.addEventListener('webview: switch', (e) => {
+						//e.detail是这里事件对象的本有属性，这个属性可以获取nav页面点击触发main窗口的切换传过来的参数,page_id就是这个传过来的参数
+						let id = e.detail.page_id
+						if(active_webview_id === id) return false //若连续点击同一个窗口界面，判断为同一窗口不进行更新，提高性能
+						switchWebviewById(id)
+						
+						let type = e.detail.type || 'now-playing'
+						console.log(type)
+						
+						//如果此次跳转的是列表页, 触发films-content页中更改类型的方法(在根事例处)
+						if(id === 'films.html'){
+							mui.fire(webview_obj[id].children()[0], 'type: change', {type: type})
+							//        films窗口           子窗口films-content（由于做了窗口双webview上拉刷新）
+						}
+					})
+					
+					//切换窗口，并接收显示窗口的id
+					function switchWebviewById(id){
+						active_webview_id = id
+						hideAllWebview()
+//						console.log(webview_obj)
+						webview_obj[id].show('fade-in', 50)  //先把所有窗口隐藏就是为了再把对应id的窗口切换显示出来
+						//参数为页面内容淡入淡出效果
+					}
+					
+					//隐藏所有窗口
+					function hideAllWebview(){
+						for(var id in webview_obj){
+							webview_obj[id].hide()
+						}
+					}
+					
+					
+					function createContentWebview(){//创建内容webview
+						let webview_obj = {}
+						contents.forEach((content, i) => {
+							//plus.webview.create( url, id, styles, extras );
+							let content_webview = plus.webview.create('./pages/' + content, content)
+							if(i !== 0) content_webview.hide() //把索引值不为0的页面隐藏，否则第一个页面应该先显示结果被后面的页面覆盖了
+							self.append(content_webview)
+							webview_obj[content] = content_webview //把页面窗口保存进对象，格式为键值对
+						})
+						return webview_obj
+					}
+					
+				})
+				
+				
+				
+			})(mui, window)
+			
+			
+		</script>
+	</body>
+
+</html>

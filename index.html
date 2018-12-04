@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+    <title></title>
+    <script src="js/mui.min.js"></script>
+    <link href="css/mui.min.css" rel="stylesheet"/>
+</head>
+<body>
+	
+</body>
+<script>
+	
+	(function($, doc){
+		$.init()
+	
+		//创建一个窗口（webview），将header.html等等的放入这个窗口，再把这个窗口放入到当前index.html所在的窗口里，类似于组建嵌套
+		//这个方法（由mui提供）中回调函数会在plus准备好，可以使用的时候执行
+		//H5+这个产品给予h5页面调用设备原生功能的能力，native的部分为window上挂载了plus对象，plus对象上就拥有了很多调用设备原生功能的方法,plus只能用于手机端
+		$.plusReady(function(){//plusReady()方法是为了更好安全的使用plus对象
+			//设置头顶原生状态的背景、文字颜色
+			plus.navigator.setStatusBarBackground('#282828');
+			plus.navigator.setStatusBarStyle( 'light' );
+			
+			let self = plus.webview.currentWebview() //获取当前窗口的WebviewObject对象
+			createHeaderWebview(self) //生成header
+			let nav_webview = createNavWebview(self) //生成nav
+			let main_webview = createMainWebview(self) //生成内容窗口
+			//给main窗口绑定遮罩层事件，当点击main的遮罩层时，关闭nav菜单
+			main_webview.addEventListener('maskClick', closeMenu)
+			isMenuShow = false //表示菜单展示是否打开的开关
+			isTransition = false //判断菜单是否在打开或关闭的运动过程中
+			
+			//为当前的窗口绑定打开菜单和关闭菜单的事件，方便在其他的时候调用
+			window.addEventListener('menu: toggle', (e) => {
+				if (isMenuShow) {
+					closeMenu()
+				}else{
+					openMenu()
+				}
+			})
+			
+			window.addEventListener('menu: open', (e) => {
+				openMenu()
+			})
+			
+			window.addEventListener("menu: close", (e) => {
+				closeMenu()
+			})
+			
+			
+			
+			function openMenu() {//打开菜单窗口逻辑
+				if(isMenuShow) return false //if条件成立才return false 否则执行下一步
+				if(isTransition) return false
+				isTransition = true
+				nav_webview.show('slide-in-left', 300)
+				//在nav展示出来时，同时展示遮罩层
+				main_webview.setStyle({ //setStyle()为main窗口创建后添加样式,样式的值为字符串类型
+					mask: 'rgba(0,0,0,0.5)'
+				})
+				setTimeout(() => {//给一点延迟，好避免切换太频繁导致浏览器反应不过来
+					isMenuShow = true
+					isTransition = false
+				}, 310)
+			}
+			
+			function closeMenu() {//关闭菜单窗口逻辑
+				if(!isMenuShow) return false
+				if(isTransition) return false
+				isTransition = true
+				nav_webview.hide('slide-out-left', 300)
+				//在nav关闭时，同时关闭遮罩层
+				main_webview.setStyle({ //setStyle()为main窗口创建后添加样式,样式的值为字符串类型
+					mask: 'none'
+				})
+				setTimeout(() => {
+					isMenuShow = false
+					isTransition = false
+				}, 310)
+			}
+		})
+		
+		
+		
+		function createHeaderWebview(current){//创建头部的Webview
+			//plus.webview.create( url, id, styles, extras );  
+			//styles: ( WebviewStyles ) 可选 创建Webview窗口的样式（如窗口宽、高、位置等信息）
+			let header_webview = plus.webview.create('header.html', 'header.html', {
+				height: '50px'
+				
+			})
+			current.append(header_webview)
+			return header_webview
+		}
+		
+		
+		function createNavWebview(current){//创建导航的Webview
+			//plus.webview.create( url, id, styles, extras );  
+			//styles: ( WebviewStyles ) 可选 创建Webview窗口的样式（如窗口宽、高、位置等信息）
+			let nav_webview = plus.webview.create('nav.html', 'nav.html', {
+				top: '50px',  //从top50px的位置开始摆放导航条
+				width: '70%'
+			})
+			current.append(nav_webview)
+			nav_webview.hide() //默认导航条先隐藏
+			return nav_webview
+		}
+		
+		
+		function createMainWebview(current){//创建内容的Webview
+			//plus.webview.create( url, id, styles, extras );  
+			//styles: ( WebviewStyles ) 可选 创建Webview窗口的样式（如窗口宽、高、位置等信息）
+			let main_webview = plus.webview.create('main.html', 'main.html', {
+				top: '50px', //从top50px的位置开始摆放内容窗口
+				bottom: '0px' //为了使底部的部分内容不被屏幕遮挡(由于上方设了top: 50px)
+			})
+			current.append(main_webview)
+			return main_webview
+		}
+
+		
+		
+	})(mui, window)
+	
+	
+			
+	
+</script>
+
+</html>

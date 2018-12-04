@@ -1,0 +1,259 @@
+<!doctype html>
+<html>
+
+	<head>
+		<meta charset="UTF-8">
+		<title></title>
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<link href="../css/mui.min.css" rel="stylesheet" />
+		<script src="../js/mui.min.js"></script>
+		<script src="../js/vue.min.js"></script>
+		<script src="../js/axios.min.js"></script>
+		<link rel="stylesheet" href="../css/animate.min.css" />
+	</head>
+	<style>
+		#app .mui-scroll{ padding: 0px 0.15rem; }
+		.nav-btns {
+			height: 46px;
+		    margin: 0 auto;
+		    border-bottom: solid #fe6e00 1px;
+		}
+		.nav-btns .btn {
+			float: left;
+		    width: 50%;
+		    height: 100%;
+		    text-align: center;
+		    font-size: 16px;
+		    line-height: 46px;
+		    color: #6a6a6a;
+		    cursor: pointer;
+		}
+		.nav-btns .btn.active {
+			color: #fe6e00;
+    			border-bottom: solid;
+		}
+		.movie-item {
+			width: 100%;
+		    padding: 0.2rem 0;
+		    border-bottom: dashed 1px #c9c9c9;
+		    cursor: pointer;
+		    display: flex;
+		    justify-content: space-between;
+		}
+		.movie-item .img-box {
+			width: 0.6rem; height: .8256rem;
+		}
+		.movie-item .info-box {
+			padding-left: .15rem;
+			flex-grow: 1;flex-shrink: 1;
+			position: relative;
+		}
+		.rage {
+			position: absolute;
+			top: 10px;right: 10px;
+			font-size: 16px;
+    			color: #fc7103;
+		}
+		.movie-item .info-box .info {
+			display: flex; flex-flow: column; justify-content: space-around;
+		}
+		.movie-item .title {
+			font-size: 16px;
+		    line-height: 32px;
+		    color: #000;
+		    overflow: hidden;
+		    text-overflow: ellipsis;
+		    white-space: nowrap;
+		}
+		.movie-item .desc {
+			height: 24px;
+		    line-height: 24px;
+		    color: #8e8e8e;
+		    font-size: 12px;
+		    overflow: hidden;
+		    text-overflow: ellipsis;
+		    white-space: nowrap;
+		    width: 100%;
+		    display: inline-block;
+		}
+		.movie-item .count, .movie-item .time {
+			line-height: 24px;
+		    color: #8e8e8e;
+		    font-size: 12px;
+		}
+		.movie-item .time { color: #fc7103; }
+		.back-top {
+			width: .45rem; height: .45rem;
+			border-radius: 50%;
+			background: #282828;
+			color: #fff;
+			display: flex;justify-content: center;align-items: center;
+			font-size: 20px;
+			position: fixed;
+			right: 15px;bottom: 15px;
+			z-index: 999;
+		}
+	</style>
+	<body>
+		<div id="app" class="mui-content mui-scroll-wrapper">
+			<div class="mui-scroll">
+				<nav-btns :change-type="changeType" :type="type"></nav-btns>
+				<!--    :change-type是细节      -->
+				<movie-box :type="type"></movie-box>
+				<transition enter-active-class="slideInRight"  leave-active-class="slideOutRight" >
+					<div @tap = "backTop" v-if = "isTopShow" class="back-top animated"><i class="mui-icon mui-icon-arrowup"></i></div>
+				</transition>
+			</div>
+		</div>
+		
+		<template id="nav-btns">
+			<div class="nav-btns">
+				<div class="btn" @tap="changeType('now-playing')" :class="type === 'now-playing' ? 'active' : ''">正在热映</div>
+				<div class="btn" @tap="changeType('coming-soon')" :class="type === 'coming-soon' ? 'active' : ''">即将上映</div>
+			</div>
+		</template>
+		
+		<template id="movie-box">
+			<div class="movie-box">
+				<movie-item :type="type" v-for="item in films" :key="item.id" :data="item"></movie-item>
+			</div>
+		</template>
+		
+		<template id="movie-item">
+			<div class="movie-item">
+					<div class="img-box img-bg"><img width="100%" :src="data.poster.origin" alt="" /></div>
+					<div class="info-box">
+						<div class="info">
+							<div class="title">{{data.name}}</div>
+							<div class="desc">{{data.intro}}</div>
+							<div class="count" v-if="type === 'now-playing'">{{data.cinemaCount}}家影院上映   {{data.watchCount}}人购票</div>
+							<div class="time" v-else>{{data.premiereAt | time}}  {{data.premiereAt | time(true)}}</div>
+						</div>
+						<div class="rage" v-if="type === 'now-playing'">{{data.grade}}</div>
+					</div>
+					
+				</div>
+		</template>
+		
+		<script type="text/javascript">
+			
+			Vue.filter('time', (value, isDay) => {
+				let date = new Date(value)
+				let month = date.getMonth() + 1
+				let day = date.getDate()
+				let d = date.getDay()
+				if(isDay) return '星期' + d
+				return month + '月' + day + '日上映'
+			})
+			
+			Vue.component('nav-btns', {
+				template: '#nav-btns',
+				props: ['type', 'changeType']
+			})
+				
+			Vue.component('movie-box', {
+				template: '#movie-box',
+				props: ['type'],
+				data () {
+					return {
+						films: [],
+						page: 1
+					}
+				},
+				methods: {
+					initRefresh () {//配置拉动刷新操作
+						mui.init({
+							pullRefresh: {
+								container: '#app',
+								up: {
+									contentrefresh: '正在加载...',
+									//callback为滑动到底部要执行的函数
+									callback: this.pulluphandler
+								}
+							}
+						})
+					},
+					pulluphandler () {//上拉加载的处理函数
+						this.page++ 
+						//根据新页数获取数据之后还原刷新加载样式,之所以用回调函数是因为可能同时存在上拉和下拉刷新两种不同方法
+						this.getfilms((hasmore) => {
+							mui('#app').pullRefresh().endPullupToRefresh(!hasmore) //参数为true代表没有更多数据了。
+						})
+					},
+					getfilms (callback) {
+						let type = this.type
+						axios.get('https://m.maizuo.com/v4/api/film/'+type, {
+							params: {page : this.page, count : 10}
+						}).then(res => {
+							//懒加载页面每次固定增加多少条数据的films数组，用concat()方法把这每次加载的数组与原来已生成的数组连接起来
+							this.films = this.films.concat(res.data.data.films)
+							let hasmore = res.data.data.page.total - this.page > 0 //总页数与当前刷新页数的差
+							callback(hasmore)
+						})
+					}
+				},
+				//当mounted的时候，有了拉动刷新容器的dom的时候去初始化拉动刷新
+				mounted () {
+					this.initRefresh()
+				},
+				watch: {//监听type数据执行axios
+					type: {
+						immediate: true, //进入页面先仅执行一次
+						handler (nowval, oldval) {
+							if(nowval !== oldval){
+								//当类型切换以后，恢复另一类型未加载的数据
+								this.page = 1
+								this.films = []
+							}
+							this.getfilms()
+						}
+					}
+				}
+			})
+			
+			Vue.component('movie-item', {
+				template: '#movie-item',
+				props: ['type', 'data']
+//				mixins: [global_mixin]
+			})
+			
+			new Vue({
+				el: '#app',
+				data: {
+						type: "now-playing", //初始刷新首先展示的页面
+						isTopShow: false //返回顶部按钮先隐藏
+				},
+				methods: {
+					changeType (type) {
+						this.type = type
+					},
+					backTop () {
+						//在a窗口通过evalJS控制b窗口去执行这段代码
+						//contentWebview.evalJS("mui('#pullrefresh').pullRefresh().scrollTo(0,0,100)");
+						//在自己绑定的窗口里去执行这段代码
+						mui('#app').pullRefresh().scrollTo(0,0,100)
+					}
+				},
+				created () {
+					//绑定更改类型的事件
+					window.addEventListener('type: change', e => {
+						let type = e.detail.type
+						this.changeType(type)
+					})
+				},
+				mounted () {
+					//因为回到顶部按钮所处的作用范围是在根实例里的，所以在这里监听滚动
+					this.$el.addEventListener('scroll', (e) =>  { 
+				      if ( e.detail.y < -300 && !this.isTopShow ) {
+				      	this.isTopShow = true
+				      }
+				      if ( e.detail.y > -300 && this.isTopShow ) {
+				      	this.isTopShow = false
+				      }
+				    }) 
+				}
+			})
+			
+		</script>
+	</body>
+</html>  
